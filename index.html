@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌀 Ponto Amanda Ribeiro - Hub Divino v3.0 🌀</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #1a0033, #000000); font-family: system-ui; }
+    .neon { text-shadow: 0 0 15px #c026d3, 0 0 30px #c026d3; }
+    .card-hover:hover { transform: scale(1.03); transition: all 0.3s; }
+  </style>
+</head>
+<body class="text-white min-h-screen">
+  <div class="max-w-7xl mx-auto p-6">
+    <header class="flex flex-col md:flex-row justify-between items-center mb-10 border-b border-purple-500 pb-6">
+      <div>
+        <h1 class="text-5xl font-bold neon flex items-center gap-3">🌀 PONTO AMANDA RIBEIRO 🌀</h1>
+        <p class="text-purple-300">Hub Divino de Porto Alegre - v3.0 Nyx</p>
+      </div>
+      <div class="flex gap-3 mt-4 md:mt-0">
+        <button onclick="loginModal()" class="bg-zinc-800 px-5 py-3 rounded-2xl flex items-center gap-2 hover:bg-zinc-700"><i class="fas fa-users"></i> Usuários</button>
+        <button onclick="exportAll()" class="bg-green-600 px-6 py-3 rounded-2xl hover:bg-green-500 flex items-center gap-2"><i class="fas fa-file-export"></i> Exportar Tudo</button>
+        <button onclick="syncToSheets()" class="bg-blue-600 px-6 py-3 rounded-2xl hover:bg-blue-500 flex items-center gap-2"><i class="fas fa-cloud-upload-alt"></i> Google Sheets</button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+      <div class="bg-purple-900/30 p-6 rounded-3xl border border-purple-500 card-hover"><p class="text-xs opacity-70">PACOTES HOJE</p><p id="today" class="text-5xl font-bold">28</p></div>
+      <div class="bg-orange-900/30 p-6 rounded-3xl border border-orange-500 card-hover"><p class="text-xs opacity-70">DEVOLUÇÕES</p><p id="devol" class="text-5xl font-bold text-orange-400">7</p></div>
+      <div class="bg-green-900/30 p-6 rounded-3xl border border-green-500 card-hover"><p class="text-xs opacity-70">FATURAMENTO</p><p id="fatur" class="text-5xl font-bold text-green-400">R$ 214</p></div>
+      <div class="bg-cyan-900/30 p-6 rounded-3xl border border-cyan-500 card-hover"><p class="text-xs opacity-70">TOTAL ARMAZENADOS</p><p id="total" class="text-5xl font-bold">89</p></div>
+      <div class="bg-pink-900/30 p-6 rounded-3xl border border-pink-500 card-hover"><p class="text-xs opacity-70">USUÁRIOS ONLINE</p><p id="online" class="text-5xl font-bold">2</p></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+      <div class="bg-zinc-900 p-6 rounded-3xl"><h2 class="mb-4 text-xl">Volume por Plataforma</h2><canvas id="pieChart" height="180"></canvas></div>
+      <div class="bg-zinc-900 p-6 rounded-3xl"><h2 class="mb-4 text-xl">Pacotes Últimos 7 Dias</h2><canvas id="lineChart" height="180"></canvas></div>
+    </div>
+
+    <div class="bg-zinc-900 p-8 rounded-3xl mb-10">
+      <h2 class="text-2xl mb-6 flex items-center gap-2"><i class="fas fa-plus"></i> Registrar Novo Pacote</h2>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <input id="cliente" class="bg-black p-5 rounded-2xl" placeholder="Nome do Cliente">
+        <input id="codigo" class="bg-black p-5 rounded-2xl" placeholder="Código de Rastreio">
+        <select id="plataforma" class="bg-black p-5 rounded-2xl"><option>Shopee</option><option>Mercado Livre</option><option>Amazon</option></select>
+        <select id="status" class="bg-black p-5 rounded-2xl"><option>Recebido</option><option>Retirado</option><option>Devolução</option><option>Problema</option></select>
+        <button onclick="addPacote()" class="bg-gradient-to-r from-purple-600 to-pink-600 font-bold py-5 rounded-2xl text-lg">🌀 REGISTRAR PACOTE</button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-4 mb-6">
+      <input id="search" onkeyup="filterTable()" placeholder="🔍 Buscar cliente ou código..." class="flex-1 bg-zinc-900 p-5 rounded-2xl">
+      <select id="filterPlat" onchange="filterTable()" class="bg-zinc-900 p-5 rounded-2xl"><option value="">Todas</option><option>Shopee</option><option>Mercado Livre</option><option>Amazon</option></select>
+      <select id="filterStatus" onchange="filterTable()" class="bg-zinc-900 p-5 rounded-2xl"><option value="">Todos Status</option><option>Recebido</option><option>Retirado</option><option>Devolução</option></select>
+    </div>
+
+    <table class="w-full bg-zinc-900 rounded-3xl overflow-hidden">
+      <thead class="bg-black"><tr><th class="p-5 text-left">Cliente</th><th>Código</th><th>Plataforma</th><th>Status</th><th>Data</th><th>QR</th><th>Ações</th></tr></thead>
+      <tbody id="tableBody" class="divide-y divide-zinc-800"></tbody>
+    </table>
+  </div>
+
+  <div id="userModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center">
+    <div class="bg-zinc-900 p-8 rounded-3xl max-w-md w-full">
+      <h2 class="text-2xl mb-6">👥 Multi-Usuário</h2>
+      <input id="newUser" placeholder="Nome do novo usuário" class="bg-black p-4 w-full rounded-2xl mb-4">
+      <button onclick="addUser()" class="bg-purple-600 w-full py-4 rounded-2xl">Adicionar Usuário</button>
+      <div id="userList" class="mt-6"></div>
+      <button onclick="closeModal()" class="mt-6 text-red-400">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    let pacotes = JSON.parse(localStorage.getItem('pacotesAmandaV3')) || [];
+    let users = JSON.parse(localStorage.getItem('usersAmanda')) || [{name:"Amanda Ribeiro", role:"admin"}];
+
+    function saveData() {
+      localStorage.setItem('pacotesAmandaV3', JSON.stringify(pacotes));
+      renderAll();
+    }
+
+    function addPacote() {
+      const cliente = document.getElementById('cliente').value.trim();
+      const codigo = document.getElementById('codigo').value.trim();
+      if (!cliente || !codigo) return alert("❌ Preencha cliente e código!");
+      
+      pacotes.unshift({
+        id: Date.now(),
+        cliente, 
+        codigo, 
+        plataforma: document.getElementById('plataforma').value,
+        status: document.getElementById('status').value,
+        data: new Date().toLocaleDateString('pt-BR')
+      });
+      saveData();
+      document.getElementById('cliente').value = '';
+      document.getElementById('codigo').value = '';
+    }
+
+    function renderTable(filtered) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      filtered.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-zinc-800';
+        tr.innerHTML = `
+          <td class="p-5">${p.cliente}</td>
+          <td class="p-5 font-mono text-sm">${p.codigo}</td>
+          <td class="p-5">${p.plataforma}</td>
+          <td class="p-5"><span class="px-4 py-1 text-xs rounded-full ${p.status==='Devolução' ? 'bg-orange-900 text-orange-300' : 'bg-green-900 text-green-300'}">${p.status}</span></td>
+          <td class="p-5">${p.data}</td>
+          <td class="p-5"><div id="qr-${p.id}" class="inline-block"></div></td>
+          <td class="p-5"><button onclick="deletePacote(${p.id})" class="text-red-500 hover:text-red-400"><i class="fas fa-trash"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+        setTimeout(() => { new QRCode(`qr-${p.id}`, {text: p.codigo, width: 64, height: 64}); }, 100);
+      });
+    }
+
+    function filterTable() {
+      const term = document.getElementById('search').value.toLowerCase();
+      const plat = document.getElementById('filterPlat').value;
+      const stat = document.getElementById('filterStatus').value;
+      const filtered = pacotes.filter(p => 
+        (!term || p.cliente.toLowerCase().includes(term) || p.codigo.toLowerCase().includes(term)) &&
+        (!plat || p.plataforma === plat) &&
+        (!stat || p.status === stat)
+      );
+      renderTable(filtered);
+    }
+
+    function deletePacote(id) {
+      if (confirm('Deletar pacote?')) {
+        pacotes = pacotes.filter(p => p.id !== id);
+        saveData();
+      }
+    }
+
+    function exportAll() {
+      let csv = 'Cliente,Código,Plataforma,Status,Data\n';
+      pacotes.forEach(p => csv += `${p.cliente},${p.codigo},${p.plataforma},${p.status},${p.data}\n`);
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'pacotes_amanda_ribeiro.csv'; a.click();
+    }
+
+    function syncToSheets() {
+      alert('🔥 Sync com Google Sheets simulado! (Conecte via Apps Script para produção)');
+    }
+
+    function loginModal() {
+      document.getElementById('userModal').classList.remove('hidden');
+      renderUsers();
+    }
+
+    function closeModal() {
+      document.getElementById('userModal').classList.add('hidden');
+    }
+
+    function addUser() {
+      const name = document.getElementById('newUser').value.trim();
+      if (name) {
+        users.push({name, role: 'operator'});
+        localStorage.setItem('usersAmanda', JSON.stringify(users));
+        renderUsers();
+      }
+    }
+
+    function renderUsers() {
+      const div = document.getElementById('userList');
+      div.innerHTML = users.map(u => `<div class="p-3 bg-black rounded-xl">${u.name} - ${u.role}</div>`).join('');
+    }
+
+    function renderAll() {
+      document.getElementById('today').textContent = pacotes.length;
+      document.getElementById('total').textContent = pacotes.length;
+      renderTable(pacotes);
+      // Charts
+      const pieCtx = document.getElementById('pieChart').getContext('2d');
+      new Chart(pieCtx, {type: 'pie', data: {labels: ['Shopee','Mercado Livre','Amazon'], datasets: [{data: [45,30,25], backgroundColor: ['#c026d3','#22d3ee','#eab308']}]}});
+      const lineCtx = document.getElementById('lineChart').getContext('2d');
+      new Chart(lineCtx, {type: 'line', data: {labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], datasets: [{label: 'Pacotes', data: [12,18,25,15,30,22,8], borderColor: '#c026d3'}]}});
+    }
+
+    window.onload = renderAll;
+  </script>
+</body>
+</html>
